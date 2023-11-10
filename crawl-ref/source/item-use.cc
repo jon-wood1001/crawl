@@ -166,7 +166,7 @@ static string _default_use_title(operation_types oper)
     case OPER_WIELD:
         return Options.equip_unequip
             ? "Wield or unwield which item (- for none)?"
-            : "Wield which item (- for none)?";
+            : "Wield which weapon?";
     case OPER_WEAR:
         return Options.equip_unequip
             ? "Wear or take off which item?"
@@ -490,7 +490,13 @@ void UseItemMenu::populate_menu()
         is_inventory = false;
     else if (item_floor.empty())
         is_inventory = true;
-
+    
+    if(oper == OPER_WIELD) {
+        string testString = "WEAPON"+ padString(32) + "ACCURACY" + padString(6) + "DAMAGE"+ padString(8) + "SPEED" + padString(9) +"BRAND";
+        MenuEntry *test = new MenuEntry(testString, MEL_SUBTITLE);
+        test->colour = YELLOW;
+        add_entry(test);
+    }
     // Entry for unarmed. Hotkey works for either subsection, though selecting
     // it (currently) enables the inv section.
     if (show_unarmed())
@@ -498,7 +504,18 @@ void UseItemMenu::populate_menu()
         string hands_string = you.unarmed_attack_name("Unarmed");
         if (!you.weapon())
             hands_string += " (current attack)";
-
+        // When `w` is pressed, the wield weapon menu is specifically selected.
+        if (oper == OPER_WIELD) {
+            string accuracyString = "2";
+            string damageString = to_string(unarmed_base_damage());
+            string speedString = "10";
+            string brandString = "N/A";
+            hands_string += padString(34-hands_string.length()) 
+                        + accuracyString + padString(15-(accuracyString.length()+1))
+                        + damageString + padString(15-(damageString.length()+1))
+                        + speedString + padString(15-(speedString.length()+1))
+                        + brandString + padString(15-(brandString.length()+1));
+        }
         MenuEntry *hands = new MenuEntry(hands_string, MEL_ITEM);
         if (!you.weapon())
             hands->colour = LIGHTGREEN;
@@ -510,7 +527,7 @@ void UseItemMenu::populate_menu()
             };
         add_entry(hands);
     }
-
+    
     if (!item_inv.empty())
     {
         // Only clarify that these are inventory items if there are also floor
@@ -521,6 +538,20 @@ void UseItemMenu::populate_menu()
             inv_header->colour = LIGHTCYAN;
             add_entry(inv_header);
         }
+        if(oper == OPER_WIELD) {
+            load_items_weild(item_inv,
+                    [&](MenuEntry* entry) -> MenuEntry*
+                    {
+                        // hacky: remove the class hotkey for cases where it
+                        // is counterintuitive/useless
+                        if (item_type_filter != OSEL_UNIDENT)
+                            entry->hotkeys.pop_back();
+                        if (item_type_filter == OBJ_SCROLLS)
+                            _note_tele_cancel(entry);
+                        return entry;
+                    });
+        }
+        else {
         load_items(item_inv,
                     [&](MenuEntry* entry) -> MenuEntry*
                     {
@@ -532,6 +563,7 @@ void UseItemMenu::populate_menu()
                             _note_tele_cancel(entry);
                         return entry;
                     });
+        }
     }
     last_inv_pos = items.size() - 1;
 

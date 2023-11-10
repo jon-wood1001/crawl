@@ -348,7 +348,7 @@ void UIMenu::update_item(int index)
     string text = me->get_text();
 
     item_info.resize(m_menu->items.size());
-
+    
     auto& entry = item_info[index];
     entry.text.clear();
     entry.text.textcolour(colour);
@@ -2293,7 +2293,7 @@ void MenuEntry::select(int qty)
 string MenuEntry::_get_text_preface() const
 {
     if (level == MEL_ITEM && hotkeys_count())
-        return make_stringf(" %s - ", keycode_to_name(hotkeys[0]).c_str());
+        return make_stringf(" %s) ", keycode_to_name(hotkeys[0]).c_str());
     else if (level == MEL_ITEM && indent_no_hotkeys)
         return "     ";
     else

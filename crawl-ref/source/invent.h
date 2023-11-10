@@ -90,6 +90,8 @@ public:
     const item_def *item;
 
     InvEntry(const item_def &i);
+    InvEntry(const item_def &i, string combinedString);
+
     void set_show_glyph(bool doshow);
     void set_show_coordinates(bool doshow);
 
@@ -150,6 +152,20 @@ public:
     menu_letter load_items(const vector<item_def>& items,
                            function<MenuEntry* (MenuEntry*)> procfn = nullptr,
                            menu_letter ckey = 'a', bool sort = true);
+
+    //======================================================================
+    //                Load Items Specifically in CMD_WEILD
+    //======================================================================
+    menu_letter load_items_weild(const vector<const item_def*> &items,
+                           function<MenuEntry* (MenuEntry*)> procfn = nullptr,
+                           menu_letter ckey = 'a', bool sort = true);
+
+    menu_letter load_items_weild(const vector<item_def>& items,
+                           function<MenuEntry* (MenuEntry*)> procfn = nullptr,
+                           menu_letter ckey = 'a', bool sort = true);
+    string padString(int padding);
+    int maxLength(const vector<const item_def*> &mitems, string col);
+    //======================================================================
 
     // Loads items from the player's inventory into the menu, and sets the
     // title to the stock title. If "procfn" is provided, it'll be called for

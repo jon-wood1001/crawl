@@ -148,6 +148,7 @@ string item_def::name(description_level_type descrip, bool terse, bool ident,
 
     const bool startvowel     = is_vowel(auxname[0]);
     const bool qualname       = (descrip == DESC_QUALNAME);
+    
 
     if (descrip == DESC_INVENTORY_EQUIP || descrip == DESC_INVENTORY)
     {
@@ -155,7 +156,7 @@ string item_def::name(description_level_type descrip, bool terse, bool ident,
         {
             buff << index_to_letter(link);
             if (terse)
-                buff << ") ";
+                buff << " - ";
             else
                 buff << " - ";
         }
@@ -173,7 +174,7 @@ string item_def::name(description_level_type descrip, bool terse, bool ident,
         descrip = DESC_PLAIN;
 
     monster_flags_t corpse_flags;
-
+    
     // no "a dragon scales"
     const bool always_plural = armour_is_hide(*this)
                                && sub_type != ARM_TROLL_LEATHER_ARMOUR;
@@ -3354,7 +3355,6 @@ string item_prefix(const item_def &item, bool temp)
 
     case OBJ_ARMOUR:
     case OBJ_JEWELLERY:
-    case OBJ_TALISMANS:
         if (is_unrandom_artefact(item))
             prefixes.push_back("unrand");
         if (is_artefact(item))

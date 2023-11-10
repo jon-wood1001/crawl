@@ -910,6 +910,7 @@ menu_letter InvMenu::load_items(const vector<const item_def*> &mitems,
                 subtitle += "</w><blue>)";
             }
         }
+        
         add_entry(new MenuEntry(subtitle, MEL_SUBTITLE));
 
         items_in_class.clear();
@@ -919,10 +920,11 @@ menu_letter InvMenu::load_items(const vector<const item_def*> &mitems,
         {
             if (mitem->base_type != i)
                 continue;
-
+            
             InvEntry * const ie = new InvEntry(*mitem);
             if (mitem->sub_type == get_max_subtype(mitem->base_type))
                 forced_first = ie;
+            
             else
                 items_in_class.push_back(ie);
         }
@@ -955,10 +957,159 @@ menu_letter InvMenu::load_items(const vector<const item_def*> &mitems,
             add_entry(procfn ? procfn(ie) : ie);
         }
     }
-
     return ckey;
 }
+//======================================================================
+//                Load Items Specifically in CMD_WIELD
+//======================================================================
+menu_letter InvMenu::load_items_weild(const vector<item_def>& mitems,
+                                function<MenuEntry* (MenuEntry*)> procfn,
+                                menu_letter ckey, bool sort)
+{
+    vector<const item_def*> xlatitems;
+    for (const item_def &item : mitems)
+        xlatitems.push_back(&item);
+    return load_items_weild(xlatitems, procfn, ckey, sort);
+}
+menu_letter InvMenu::load_items_weild(const vector<const item_def*> &mitems,
+                                function<MenuEntry* (MenuEntry*)> procfn,
+                                menu_letter ckey, bool sort)
+{
+    FixedVector< int, NUM_OBJECT_CLASSES > inv_class(0);
+    for (const item_def * const mitem : mitems)
+        inv_class[mitem->base_type]++;
 
+    vector<InvEntry*> items_in_class;
+    const menu_sort_condition *cond = nullptr;
+    if (sort)
+        cond = find_menu_sort_condition();
+
+    for (int obj = 0; obj < NUM_OBJECT_CLASSES; ++obj)
+    {
+        int i = inv_order[obj];
+
+        if (!inv_class[i])
+            continue;
+        
+        items_in_class.clear();
+
+        InvEntry *forced_first = nullptr;
+    
+        for (const item_def * const mitem : mitems)
+        {
+            string baseNumString = to_string(property(*mitem, PWPN_DAMAGE));
+            string baseSpeedString = to_string(property(*mitem, PWPN_SPEED));
+            string brandString = weapon_brand_name(*mitem, 0);
+            string accuracyString = to_string(property(*mitem, PWPN_HIT));
+            if(brandString == "")
+                brandString = "N/A";
+            string combined = mitem->name(DESC_A) + padString((maxLength(mitems, "name") - mitem->name(DESC_A).length()) + (33 - (maxLength(mitems, "name"))))
+                            + accuracyString + padString(15-(accuracyString.length()+1))
+                            + baseNumString + padString(15-(baseNumString.length()+1)) 
+                            + baseSpeedString + padString(15-(baseSpeedString.length()+1))
+                            + brandString; 
+            
+            if (mitem->base_type != i)
+                continue;
+            InvEntry * const ie = new InvEntry(*mitem, combined);
+            if (mitem->sub_type == get_max_subtype(mitem->base_type))
+                forced_first = ie;
+            
+            else
+                items_in_class.push_back(ie);
+        }
+        sort_menu(items_in_class, cond);
+        if (forced_first)
+            items_in_class.insert(items_in_class.begin(),forced_first);
+        
+        for (InvEntry *ie : items_in_class)
+        {
+            if (tag == "pickup")
+            {
+                if (ie->item && item_is_stationary(*ie->item))
+                    ie->tag = "nopickup";
+                else
+                    ie->tag = "pickup";
+            }
+            if (get_flags() & MF_NOSELECT)
+                ie->hotkeys.clear();
+            // If there's no hotkey, provide one.
+            else if (ie->hotkeys[0] == ' ')
+            {
+                if (ie->tag == "nopickup")
+                    ie->hotkeys.clear();
+                else
+                    ie->hotkeys[0] = ckey++;
+            }
+
+            do_preselect(ie);
+            
+            add_entry(procfn ? procfn(ie) : ie);
+            
+        }
+    }
+    return ckey;
+}
+ int InvMenu::maxLength(const vector<const item_def*> &mitems, string col) {
+    int max = -999;
+    
+    for (const item_def * const itemLength : mitems) {
+        if(col == "name") {
+            int strLength = itemLength->name(DESC_INVENTORY).length();
+            if(strLength >= max)
+                max = strLength;
+        }
+    }
+    return max;
+}
+string InvMenu::padString(int padding) {
+    string pad = "";
+    for(int padI = 0; padI <= padding; padI++) {
+        pad += " ";
+    }
+    return pad;
+}
+InvEntry::InvEntry(const item_def &i, string combinedText)
+    : MenuEntry("", MEL_ITEM), item(&i), _has_star(false)
+{
+    
+    indent_no_hotkeys = true;
+    // This gets the inventory coloring rules to apply by default:
+    tag = "inventory";
+
+    // Data is an inherited void *. When using InvEntry in menus
+    // use the const item in this class whenever possible
+    data = const_cast<item_def *>(item);
+
+    if (in_inventory(i) && i.base_type != OBJ_GOLD)
+    {
+        // We need to do this in order to get the 'wielded' annotation.
+        // We then toss out the first four characters, which look
+        // like this: "a - ". Ow. FIXME.
+        text = combinedText;
+    }
+    else
+        text = i.name(DESC_INVENTORY, true);
+
+    if (item_is_stationary_net(i))
+    {
+        actor *trapped = actor_at(i.pos);
+        text += make_stringf(" (holding %s)",
+                            trapped ? trapped->name(DESC_A).c_str()
+                                    : "nobody"); // buggy net, but don't crash
+    }
+
+    if (i.base_type != OBJ_GOLD && in_inventory(i))
+        add_hotkey(index_to_letter(i.link));
+    else
+        add_hotkey(' ');        // dummy hotkey
+
+    add_class_hotkeys(i);
+
+    quantity = i.quantity;
+    
+}
+//======================================================================
 void InvMenu::do_preselect(InvEntry *ie)
 {
     if (!pre_select || pre_select->empty())
