@@ -2433,6 +2433,12 @@ Ctrl-X
 
 Ctrl-O
   Show dungeon overview (branches, shops, etc.).
+  Shows altars and their god's favor toward the player:
+  - gray    =  undiscovered altar
+  - white   =  discovered altar
+  - yellow  =  player worships this god
+  - red     =  player under penance with this god
+  - brown   =  god favors player's god
 
 !
   Annotate a level. You can annotate any level of a branch of which you have
